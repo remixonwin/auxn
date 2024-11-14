@@ -2,6 +2,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import random
 from datetime import datetime, timedelta
 
 # Page config
@@ -14,24 +15,54 @@ st.set_page_config(
 # Sample auction data
 @st.cache_data
 def load_auction_data():
+    # US State capitals data
+    state_data = {
+        'state': [
+            'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+            'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+            'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+            'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+            'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+        ],
+        'city': [
+            'Montgomery', 'Juneau', 'Phoenix', 'Little Rock', 'Sacramento', 'Denver', 'Hartford', 'Dover', 'Tallahassee', 'Atlanta',
+            'Honolulu', 'Boise', 'Springfield', 'Indianapolis', 'Des Moines', 'Topeka', 'Frankfort', 'Baton Rouge', 'Augusta', 'Annapolis',
+            'Boston', 'Lansing', 'St. Paul', 'Jackson', 'Jefferson City', 'Helena', 'Lincoln', 'Carson City', 'Concord', 'Trenton',
+            'Santa Fe', 'Albany', 'Raleigh', 'Bismarck', 'Columbus', 'Oklahoma City', 'Salem', 'Harrisburg', 'Providence', 'Columbia',
+            'Pierre', 'Nashville', 'Austin', 'Salt Lake City', 'Montpelier', 'Richmond', 'Olympia', 'Charleston', 'Madison', 'Cheyenne'
+        ],
+        'lat': [
+            32.3792, 58.3019, 33.4484, 34.7465, 38.5816, 39.7392, 41.7658, 39.1582, 30.4383, 33.7490,
+            21.3069, 43.6150, 39.7817, 39.7684, 41.5868, 39.0473, 38.2009, 30.4515, 44.3107, 38.9784,
+            42.3601, 42.7325, 44.9537, 32.2988, 38.5767, 46.5891, 40.8258, 39.1638, 43.2081, 40.2206,
+            35.6869, 42.6526, 35.7796, 46.8083, 39.9612, 35.4676, 44.9429, 40.2732, 41.8240, 34.0007,
+            44.3683, 36.1627, 30.2672, 40.7608, 44.2601, 37.5407, 47.0379, 38.3498, 43.0731, 41.1399
+        ],
+        'lon': [
+            -86.3077, -134.4197, -112.0740, -92.2896, -121.4944, -104.9903, -72.6734, -75.5244, -84.2807, -84.3880,
+            -157.8583, -116.2023, -89.6501, -86.1581, -93.6250, -95.6752, -84.8733, -91.1871, -69.7795, -76.4922,
+            -71.0589, -84.5555, -93.0900, -90.1848, -92.1735, -112.0391, -96.6852, -119.7674, -71.5376, -74.7699,
+            -105.9372, -73.7562, -78.6382, -100.7837, -82.9988, -97.5164, -123.0351, -76.8867, -71.4128, -81.0348,
+            -100.3510, -86.7816, -97.7431, -111.8910, -72.5754, -77.4360, -122.9007, -81.6326, -89.4012, -104.8202
+        ]
+    }
+    
+    # Generate random auction data for each state
+    categories = ['Estate', 'Vehicle', 'Art', 'Industrial', 'Jewelry']
+    statuses = ['Live', 'Upcoming', 'Ended']
+    
     return pd.DataFrame({
-        'id': range(1, 11),
-        'title': [f"Auction {i}" for i in range(1, 11)],
-        'category': ['Estate', 'Vehicle', 'Art', 'Estate', 'Industrial', 
-                    'Jewelry', 'Vehicle', 'Estate', 'Art', 'Industrial'],
-        'status': ['Live', 'Upcoming', 'Live', 'Ended', 'Live',
-                  'Upcoming', 'Live', 'Upcoming', 'Live', 'Ended'],
-        'items_count': [45, 1, 25, 120, 75, 10, 1, 85, 15, 50],
-        'current_bid': [15000, 25000, 5000, 35000, 50000,
-                       8000, 30000, 45000, 12000, 28000],
+        'id': range(1, 51),
+        'title': [f"Auction in {city}" for city in state_data['city']],
+        'category': [categories[i % len(categories)] for i in range(50)],
+        'status': [statuses[i % len(statuses)] for i in range(50)],
+        'items_count': [random.randint(1, 200) for _ in range(50)],
+        'current_bid': [random.randint(5000, 100000) for _ in range(50)],
         'end_date': [(datetime.now() + timedelta(days=x)).strftime('%Y-%m-%d') 
-                     for x in range(1, 11)],
-        'lat': [40.7128, 34.0522, 41.8781, 29.7604, 39.9526,
-                42.3601, 33.7490, 36.1627, 37.7749, 38.9072],
-        'lon': [-74.0060, -118.2437, -87.6298, -95.3698, -75.1652,
-                -71.0589, -84.3880, -86.7816, -122.4194, -77.0369],
-        'location': ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Philadelphia',
-                    'Boston', 'Atlanta', 'Nashville', 'San Francisco', 'Washington DC']
+                     for x in range(1, 51)],
+        'lat': state_data['lat'],
+        'lon': state_data['lon'],
+        'location': [f"{city}, {state}" for city, state in zip(state_data['city'], state_data['state'])]
     })
 
 # Load data
