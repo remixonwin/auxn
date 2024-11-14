@@ -8,9 +8,9 @@ if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 if 'username' not in st.session_state:
     st.session_state.username = None
+if 'users' not in st.session_state:
+    st.session_state.users = {}
 if 'items' not in st.session_state:
-    st.session_state.items = []
-    # Add sample item
     st.session_state.items = [
         {
             'id': 1,
@@ -24,22 +24,48 @@ if 'items' not in st.session_state:
         }
     ]
 
-# Authentication
-def login():
+def validate_credentials(username, password):
+    if len(username) < 3 or len(password) < 6:
+        return False
+    return True
+
+def login_signup():
     with st.sidebar:
-        st.header("Login")
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        if st.button("Login"):
-            st.session_state.authenticated = True
-            st.session_state.username = username
-            st.rerun()
+        st.header("Welcome")
+        tab1, tab2 = st.tabs(["Login", "Sign Up"])
+        
+        with tab1:
+            username = st.text_input("Username", key="login_user")
+            password = st.text_input("Password", type="password", key="login_pass")
+            if st.button("Login"):
+                if username in st.session_state.users and st.session_state.users[username] == password:
+                    st.session_state.authenticated = True
+                    st.session_state.username = username
+                    st.success("Login successful!")
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials")
+        
+        with tab2:
+            new_username = st.text_input("Choose Username", key="signup_user")
+            new_password = st.text_input("Choose Password", type="password", key="signup_pass")
+            confirm_password = st.text_input("Confirm Password", type="password")
+            if st.button("Sign Up"):
+                if new_username in st.session_state.users:
+                    st.error("Username already exists")
+                elif not validate_credentials(new_username, new_password):
+                    st.error("Username must be at least 3 characters and password at least 6 characters")
+                elif new_password != confirm_password:
+                    st.error("Passwords don't match")
+                else:
+                    st.session_state.users[new_username] = new_password
+                    st.success("Account created! Please login.")
 
 # Page configuration
 st.set_page_config(page_title="Online Auction", layout="wide")
 
 if not st.session_state.authenticated:
-    login()
+    login_signup()
 else:
     st.title("🎈 Online Auction")
     
