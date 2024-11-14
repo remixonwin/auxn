@@ -1,138 +1,121 @@
+# streamlit_app.py
 import streamlit as st
+import pandas as pd
+import plotly.express as px
 from datetime import datetime, timedelta
 
-# Initialize session state
-if 'authenticated' not in st.session_state:
-    st.session_state.authenticated = False
-if 'username' not in st.session_state:
-    st.session_state.username = None
-if 'users' not in st.session_state:
-    st.session_state.users = {}
-if 'items' not in st.session_state:
-    st.session_state.items = [{
-        'id': 1,
-        'name': 'Vintage Watch',
-        'description': 'Classic timepiece in excellent condition',
-        'current_bid': 100.0,
-        'min_increment': 10.0,
-        'end_time': (datetime.now() + timedelta(hours=24)).isoformat(),
-        'image_url': 'https://via.placeholder.com/150',
-        'highest_bidder': None
-    }]
+# Page config
+st.set_page_config(
+    page_title="Auction Explorer",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-def validate_credentials(username, password):
-    return len(username) >= 3 and len(password) >= 6
+# Sample auction data
+@st.cache_data
+def load_auction_data():
+    return pd.DataFrame({
+        'id': range(1, 11),
+        'title': [f"Auction {i}" for i in range(1, 11)],
+        'category': ['Estate', 'Vehicle', 'Art', 'Estate', 'Industrial', 
+                    'Jewelry', 'Vehicle', 'Estate', 'Art', 'Industrial'],
+        'status': ['Live', 'Upcoming', 'Live', 'Ended', 'Live',
+                  'Upcoming', 'Live', 'Upcoming', 'Live', 'Ended'],
+        'items_count': [45, 1, 25, 120, 75, 10, 1, 85, 15, 50],
+        'current_bid': [15000, 25000, 5000, 35000, 50000,
+                       8000, 30000, 45000, 12000, 28000],
+        'end_date': [(datetime.now() + timedelta(days=x)).strftime('%Y-%m-%d') 
+                     for x in range(1, 11)],
+        'lat': [40.7128, 34.0522, 41.8781, 29.7604, 39.9526,
+                42.3601, 33.7490, 36.1627, 37.7749, 38.9072],
+        'lon': [-74.0060, -118.2437, -87.6298, -95.3698, -75.1652,
+                -71.0589, -84.3880, -86.7816, -122.4194, -77.0369],
+        'location': ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Philadelphia',
+                    'Boston', 'Atlanta', 'Nashville', 'San Francisco', 'Washington DC']
+    })
 
-def login_user(username, password):
-    if username in st.session_state.users and st.session_state.users[username] == password:
-        st.session_state.authenticated = True
-        st.session_state.username = username
-        return True
-    return False
+# Load data
+auctions_df = load_auction_data()
 
-def signup_user(username, password):
-    if username not in st.session_state.users and validate_credentials(username, password):
-        st.session_state.users[username] = password
-        return True
-    return False
+# Sidebar filters
+st.sidebar.header("Auction Filters")
+status_filter = st.sidebar.multiselect(
+    "Status",
+    options=auctions_df['status'].unique(),
+    default=auctions_df['status'].unique()
+)
 
-def login_signup():
-    with st.sidebar:
-        st.header("Welcome")
-        tab1, tab2 = st.tabs(["Login", "Sign Up"])
+category_filter = st.sidebar.multiselect(
+    "Category",
+    options=auctions_df['category'].unique(),
+    default=auctions_df['category'].unique()
+)
+
+# Main content
+st.title("🔨 Auction Explorer")
+st.markdown("Find auctions across the United States")
+
+# Search bar
+search = st.text_input("Search auctions...")
+
+# Apply filters
+filtered_auctions = auctions_df[
+    (auctions_df['status'].isin(status_filter)) &
+    (auctions_df['category'].isin(category_filter))
+]
+
+if search:
+    filtered_auctions = filtered_auctions[
+        filtered_auctions['title'].str.contains(search, case=False) |
+        filtered_auctions['location'].str.contains(search, case=False)
+    ]
+
+# Map view
+st.subheader("Auction Locations")
+fig = px.scatter_mapbox(
+    filtered_auctions,
+    lat='lat',
+    lon='lon',
+    hover_name='title',
+    hover_data=['status', 'category', 'items_count', 'current_bid'],
+    color='status',
+    size='items_count',
+    size_max=15,
+    zoom=3,
+    center=dict(lat=39.8283, lon=-98.5795),  # Center of US
+    mapbox_style='open-street-map'
+)
+st.plotly_chart(fig, use_container_width=True)
+
+# Auction listings
+st.subheader("Current Auctions")
+
+# Generate random image URLs for demo purposes (replace with real auction images)
+st.image("https://picsum.photos/800/400", caption="Featured Auction Items")
+cols = st.columns(3)
+for idx, auction in filtered_auctions.iterrows():
+    with cols[idx % 3]:
+        st.write("---")
+        st.markdown(f"### {auction['title']}")
+        # Display random auction image (replace with actual auction images)
+        st.image(f"https://picsum.photos/400/300?random={auction['id']}", use_container_width=True)
+        st.write(f"📍 {auction['location']}")
+        st.write(f"📦 Items: {auction['items_count']}")
+        st.write(f"💰 Current Bid: ${auction['current_bid']:,}")
+        st.write(f"📅 Ends: {auction['end_date']}")
         
-        with tab1:
-            username = st.text_input("Username", key="login_user")
-            password = st.text_input("Password", type="password", key="login_pass")
-            if st.button("Login"):
-                if login_user(username, password):
-                    st.success("Login successful!")
-                    st.experimental_rerun()
-                else:
-                    st.error("Invalid credentials")
+        status_color = {
+            'Live': 'green',
+            'Upcoming': 'blue',
+            'Ended': 'red'
+        }
+        st.markdown(f"**Status:** :{status_color[auction['status']]}[{auction['status']}]")
         
-        with tab2:
-            new_username = st.text_input("Choose Username", key="signup_user")
-            new_password = st.text_input("Choose Password", type="password", key="signup_pass")
-            if st.button("Sign Up"):
-                if signup_user(new_username, new_password):
-                    st.success("Account created! Please login.")
-                else:
-                    st.error("Invalid credentials or username taken")
-
-def logout():
-    st.session_state.authenticated = False
-    st.session_state.username = None
-    st.experimental_rerun()
-
-def display_auctions():
-    try:
-        st.title("🎈 Online Auction")
+        if auction['status'] == 'Live':
+            st.button(f"Place Bid 🔨", key=f"bid_{auction['id']}")
         
-        # Create tabs
-        tab1, tab2 = st.tabs(["Active Auctions", "My Bids"])
+        st.button(f"View Details", key=f"details_{auction['id']}")
 
-        with tab1:
-            if not st.session_state.items:
-                st.info("No items available for auction")
-                return
-
-            cols = st.columns(3)
-            for idx, item in enumerate(st.session_state.items):
-                with cols[idx % 3]:
-                    st.image(item['image_url'], use_column_width=True)
-                    st.subheader(item['name'])
-                    st.write(item['description'])
-                    
-                    try:
-                        end_time = datetime.fromisoformat(item['end_time'])
-                        time_left = end_time - datetime.now()
-                        
-                        if time_left.total_seconds() > 0:
-                            st.write(f"Time left: {time_left.seconds//3600}h {(time_left.seconds//60)%60}m")
-                            st.write(f"Current bid: ${item['current_bid']:.2f}")
-                            
-                            new_bid = st.number_input(
-                                "Your bid",
-                                min_value=float(item['current_bid'] + item['min_increment']),
-                                step=float(item['min_increment']),
-                                key=f"bid_{item['id']}"
-                            )
-                            
-                            if st.button("Place Bid", key=f"btn_{item['id']}"):
-                                if new_bid >= item['current_bid'] + item['min_increment']:
-                                    item['current_bid'] = new_bid
-                                    item['highest_bidder'] = st.session_state.username
-                                    st.success("Bid placed successfully!")
-                                else:
-                                    st.error("Bid too low")
-                        else:
-                            st.error("Auction ended")
-                    except Exception as e:
-                        st.error(f"Error displaying item: {str(e)}")
-
-        with tab2:
-            st.header("My Bids")
-            if st.session_state.username:
-                my_bids = [item for item in st.session_state.items 
-                          if item.get('highest_bidder') == st.session_state.username]
-                if my_bids:
-                    for bid in my_bids:
-                        st.write(f"Item: {bid['name']} - Your bid: ${bid['current_bid']:.2f}")
-                else:
-                    st.info("You haven't placed any bids yet")
-            else:
-                st.warning("Please login to see your bids")
-
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        
-# Main app flow
-st.set_page_config(page_title="Online Auction", layout="wide")
-
-if not st.session_state.authenticated:
-    login_signup()
-else:
-    display_auctions()
-    if st.sidebar.button("Logout"):
-        logout()
+# Footer
+st.markdown("---")
+st.markdown("Demo Auction Explorer - Built with Streamlit")
