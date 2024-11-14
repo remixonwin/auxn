@@ -5,6 +5,9 @@ import plotly.express as px
 import random
 from datetime import datetime, timedelta
 
+if 'current_page' not in st.session_state:
+    st.session_state['current_page'] = None
+
 # Page config
 st.set_page_config(
     page_title="Auction Explorer",
@@ -118,34 +121,64 @@ fig = px.scatter_mapbox(
 )
 st.plotly_chart(fig, use_container_width=True)
 
-# Auction listings
-st.subheader("Current Auctions")
+if st.session_state['current_page'] is None:
+    # Main auction listings page
+    st.subheader("Current Auctions")
+    st.image("https://picsum.photos/800/400", caption="Featured Auction Items")
+    
+    cols = st.columns(3)
+    for idx, auction in filtered_auctions.iterrows():
+        with cols[idx % 3]:
+            st.write("---")
+            st.markdown(f"### {auction['title']}")
+            st.image(f"https://picsum.photos/400/300?random={auction['id']}", use_container_width=True)
+            st.write(f"📍 {auction['location']}")
+            st.write(f"📦 Items: {auction['items_count']}")
+            st.write(f"💰 Current Bid: ${auction['current_bid']:,}")
+            st.write(f"📅 Ends: {auction['end_date']}")
+            
+            status_color = {
+                'Live': 'green',
+                'Upcoming': 'blue',
+                'Ended': 'red'
+            }
+            st.markdown(f"**Status:** :{status_color[auction['status']]}[{auction['status']}]")
+            
+            if auction['status'] == 'Live':
+                st.button(f"Place Bid 🔨", key=f"bid_{auction['id']}")
+            
+            state = auction['location'].split(', ')[1]
+            if st.button(f"View {state} Details", key=f"details_{auction['id']}"):
+                st.session_state['current_page'] = state
+                st.rerun()
 
-# Generate random image URLs for demo purposes (replace with real auction images)
-st.image("https://picsum.photos/800/400", caption="Featured Auction Items")
-cols = st.columns(3)
-for idx, auction in filtered_auctions.iterrows():
-    with cols[idx % 3]:
-        st.write("---")
-        st.markdown(f"### {auction['title']}")
-        # Display random auction image (replace with actual auction images)
-        st.image(f"https://picsum.photos/400/300?random={auction['id']}", use_container_width=True)
-        st.write(f"📍 {auction['location']}")
-        st.write(f"📦 Items: {auction['items_count']}")
-        st.write(f"💰 Current Bid: ${auction['current_bid']:,}")
-        st.write(f"📅 Ends: {auction['end_date']}")
+else:
+    # State details page
+    state = st.session_state['current_page']
+    st.title(f"Auctions in {state}")
+    
+    if st.button("← Back to All Auctions"):
+        st.session_state['current_page'] = None
+        st.rerun()
+    
+    state_auctions = filtered_auctions[filtered_auctions['location'].str.endswith(state)]
+    for _, auction in state_auctions.iterrows():
+        st.markdown("---")
+        col1, col2 = st.columns([1, 2])
         
-        status_color = {
-            'Live': 'green',
-            'Upcoming': 'blue',
-            'Ended': 'red'
-        }
-        st.markdown(f"**Status:** :{status_color[auction['status']]}[{auction['status']}]")
+        with col1:
+            st.image(f"https://picsum.photos/400/300?random={auction['id']}")
         
-        if auction['status'] == 'Live':
-            st.button(f"Place Bid 🔨", key=f"bid_{auction['id']}")
-        
-        st.button(f"View Details", key=f"details_{auction['id']}")
+        with col2:
+            st.markdown(f"### {auction['title']}")
+            st.write(f"📍 {auction['location']}")
+            st.write(f"Category: {auction['category']}")
+            st.write(f"Items: {auction['items_count']}")
+            st.write(f"Current Bid: ${auction['current_bid']:,}")
+            st.write(f"Ends: {auction['end_date']}")
+            
+            if auction['status'] == 'Live':
+                st.button(f"Place Bid 🔨", key=f"state_bid_{auction['id']}")
 
 # Footer
 st.markdown("---")
