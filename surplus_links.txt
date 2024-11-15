@@ -1,0 +1,3 @@
+MN,https://mnbid.mn.gov/search,Untitled Page
+WI,https://wisconsinsurplus.com/,403 Forbidden
+WI,https://veronaoperations.businessservices.wisc.edu/,Verona Operations – MDS/SWAP – UW–Madison
