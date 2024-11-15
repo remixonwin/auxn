@@ -79,11 +79,13 @@ if 'surplus_links' not in st.session_state:
     try:
         with open('surplus_links.txt', 'r') as f:
             for line in f:
-                state, link = line.strip().split(',')
-                if state not in st.session_state.surplus_links:
-                    st.session_state.surplus_links[state] = []
-                if link not in st.session_state.surplus_links[state]:
-                    st.session_state.surplus_links[state].append(link)
+                parts = line.strip().split(',', 2)  # Split into max 3 parts
+                if len(parts) >= 2:  # Ensure at least state and link exist
+                    state, link = parts[0], parts[1]
+                    if state not in st.session_state.surplus_links:
+                        st.session_state.surplus_links[state] = []
+                    if link not in st.session_state.surplus_links[state]:
+                        st.session_state.surplus_links[state].append(link)
     except FileNotFoundError:
         pass
 
@@ -206,7 +208,15 @@ else:
                     # Get the page title
                     response = requests.get(new_link)
                     soup = BeautifulSoup(response.text, 'html.parser')
-                    page_title = soup.title.string if soup.title else "Untitled Page"
+                    page_title = soup.title.string if soup.title else None
+                    
+                    # If no title found, try finding h1 or other heading
+                    if not page_title:
+                        h1 = soup.find('h1')
+                        if h1:
+                            page_title = h1.get_text()
+                        else:
+                            page_title = "Untitled Page"
 
                     if state not in st.session_state.surplus_links:
                         st.session_state.surplus_links[state] = []
@@ -223,7 +233,13 @@ else:
         if state in st.session_state.surplus_links and st.session_state.surplus_links[state]:
             st.markdown("### Surplus Auction Links:")
             for idx, link in enumerate(st.session_state.surplus_links[state], 1):
-                st.markdown(f"{idx}. [{state} Surplus Auction #{idx}]({link})")
+                try:
+                    response = requests.get(link)
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    page_title = soup.title.string if soup.title else f"{state} Surplus Auction #{idx}"
+                    st.markdown(f"{idx}. [{page_title}]({link})")
+                except:
+                    st.markdown(f"{idx}. [{state} Surplus Auction #{idx}]({link})")
 
         # Add basic state info link
         full_state_name = state_names[state]
