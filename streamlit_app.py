@@ -205,8 +205,13 @@ else:
             submit = st.form_submit_button("Submit")
             if submit and new_link:
                 try:
-                    # Get the page title
-                    response = requests.get(new_link)
+                    # Basic URL validation
+                    if not new_link.startswith(('http://', 'https://')):
+                        raise ValueError("URL must start with http:// or https://")
+                        
+                    # Get the page title with timeout
+                    response = requests.get(new_link, timeout=5, verify=True)
+                    response.raise_for_status()  # Raise exception for bad status codes
                     soup = BeautifulSoup(response.text, 'html.parser')
                     page_title = soup.title.string if soup.title else None
                     
