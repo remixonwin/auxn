@@ -1,8 +1,0 @@
-MN,https://mnbid.mn.gov/search
-WI,https://swapauction.wisc.edu/
-WI,https://wisconsinsurplus.com/
-WI,https://www.govdeals.com/wisconsin
-AK,https://ops21.incircuit.com/ops9/f?p=1024:1500::::1500::,Web Surplus
-AK,https://www.publicsurplus.com/sms/all,ak/browse/allcat,Public Surplus: 
-    Browse all categories
-
