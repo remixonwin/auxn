@@ -4,6 +4,8 @@ import pandas as pd
 import plotly.express as px
 import random
 from datetime import datetime, timedelta
+import requests
+from bs4 import BeautifulSoup
 
 if 'current_page' not in st.session_state:
     st.session_state['current_page'] = None
@@ -70,6 +72,20 @@ def load_auction_data():
 
 # Load data
 auctions_df = load_auction_data()
+
+# Initialize surplus links
+if 'surplus_links' not in st.session_state:
+    st.session_state.surplus_links = {}
+    try:
+        with open('surplus_links.txt', 'r') as f:
+            for line in f:
+                state, link = line.strip().split(',')
+                if state not in st.session_state.surplus_links:
+                    st.session_state.surplus_links[state] = []
+                if link not in st.session_state.surplus_links[state]:
+                    st.session_state.surplus_links[state].append(link)
+    except FileNotFoundError:
+        pass
 
 # Sidebar filters
 st.sidebar.header("Auction Filters")
@@ -165,9 +181,59 @@ else:
     for _, auction in state_auctions.iterrows():
         st.markdown("---")
         col1, col2 = st.columns([1, 2])
-        
+        # Add link to Wikipedia for each state
+        # Dictionary of state abbreviations to full names
+        state_names = {
+            'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas', 'CA': 'California',
+            'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware', 'FL': 'Florida', 'GA': 'Georgia',
+            'HI': 'Hawaii', 'ID': 'Idaho', 'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa',
+            'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+            'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi',
+            'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada', 'NH': 'New_Hampshire',
+            'NJ': 'New_Jersey', 'NM': 'New_Mexico', 'NY': 'New_York', 'NC': 'North_Carolina',
+            'ND': 'North_Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma', 'OR': 'Oregon', 'PA': 'Pennsylvania',
+            'RI': 'Rhode_Island', 'SC': 'South_Carolina', 'SD': 'South_Dakota', 'TN': 'Tennessee',
+            'TX': 'Texas', 'UT': 'Utah', 'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington',
+            'WV': 'West_Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming'
+        }
+        # Display all stored surplus links for this state
+        # Always show the link submit box
+        with st.form(key=f'surplus_form_{state}'):
+            new_link = st.text_input("Add surplus auction link:")
+            submit = st.form_submit_button("Submit")
+            if submit and new_link:
+                try:
+                    # Get the page title
+                    response = requests.get(new_link)
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    page_title = soup.title.string if soup.title else "Untitled Page"
+
+                    if state not in st.session_state.surplus_links:
+                        st.session_state.surplus_links[state] = []
+                    if new_link not in st.session_state.surplus_links[state]:
+                        st.session_state.surplus_links[state].append(new_link)
+                        # Save to file with title
+                        with open('surplus_links.txt', 'a') as f:
+                            f.write(f"{state},{new_link},{page_title}\n")
+                        st.success("Link added successfully!")
+                except Exception as e:
+                    st.error("Could not fetch page title. Please check the URL.")
+
+        # Display existing surplus links
+        if state in st.session_state.surplus_links and st.session_state.surplus_links[state]:
+            st.markdown("### Surplus Auction Links:")
+            for idx, link in enumerate(st.session_state.surplus_links[state], 1):
+                st.markdown(f"{idx}. [{state} Surplus Auction #{idx}]({link})")
+
+        # Add basic state info link
+        full_state_name = state_names[state]
         with col1:
-            st.image(f"https://picsum.photos/400/300?random={auction['id']}")
+            # Use state capitol images instead of random images
+            state = auction['location'].split(', ')[1]
+            capitol_image = f"https://placehold.co/400x300/lightgray/darkgray?text={state}+Capitol"
+            st.markdown(f"[![{state} State Capitol]({capitol_image})](https://en.wikipedia.org/wiki/{full_state_name})")
+            st.caption(f"{state} State Capitol")
+
         
         with col2:
             st.markdown(f"### {auction['title']}")
@@ -182,4 +248,3 @@ else:
 
 # Footer
 st.markdown("---")
-st.markdown("Demo Auction Explorer - Built with Streamlit")
